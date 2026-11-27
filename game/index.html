@@ -109,26 +109,14 @@ body {
 			<div id="status-notice"></div>
 		</div>
 
-		<script>
-const originalFetch = window.fetch.bind(window);
-window.fetch = async function(input, options) {
- const url = new URL(typeof input === 'string' ? input : input.url, location.href);
- if (url.origin === location.origin && /\/index\.(wasm|pck)$/.test(url.pathname)) {
-  const parts = url.pathname.endsWith('.pck') ? 9 : 2;
-  const responses = await Promise.all(Array.from({length:parts},(_,i)=>originalFetch(url.href+'.gz.part'+i,options)));
-  if(responses.some(r=>!r.ok)) throw new Error('Game asset download failed');
-  const buffers = await Promise.all(responses.map(r=>r.arrayBuffer()));
-  const response = new Response(new Blob(buffers).stream());
-  if (!response.ok) throw new Error('Game download failed: ' + response.status);
-  return new Response(response.body.pipeThrough(new DecompressionStream('gzip')), {headers:{'Content-Type':url.pathname.endsWith('.wasm')?'application/wasm':'application/octet-stream'}});
- }
- return originalFetch(input,options);
-};
+		<script src="parts.js"></script>
+<script src="download.js"></script>
+<script>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement && window.room302Command)window.parent.postMessage({type:'room302-pause'},location.origin)});
 </script>
-<script src="index.js"></script>
+<script src="index.js" onerror="notifyGame('failed', {reason: 'network'})"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":144456668,"index.wasm":39514754},"focusCanvas":false,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":27629920,"index.wasm":39514754},"focusCanvas":false,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -167,6 +155,7 @@ const engine = new Engine(GODOT_CONFIG);
 	}
 
 	function displayFailureNotice(err) {
+		notifyGame('failed', {reason: 'engine'});
 		console.error(err);
 		if (err instanceof Error) {
 			setStatusNotice(err.message);
@@ -211,6 +200,7 @@ const engine = new Engine(GODOT_CONFIG);
 			});
 		} else {
 			// Display the message as usual
+			notifyGame('failed', {reason: 'unsupported'});
 			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
 			displayFailureNotice(missingMsg + missing.join('\n'));
 		}

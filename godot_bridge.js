@@ -2,6 +2,42 @@
 (() => {
   let browserFrame = null;
   let browserReady = false;
+  let loadState = 'idle';
+  let failure = '';
+  let loaded = 0, total = 0, watchdog;
+  function showLoadState() {
+    const button = document.getElementById('game-play');
+    const note = document.querySelector('#game-start-cover p');
+    if (!button || !note || loadState === 'idle') return;
+    const en = lang === 'en';
+    button.disabled = loadState === 'loading';
+    if (loadState === 'ready') {
+      button.textContent = en ? 'Enter room' : '进入房间';
+      note.textContent = en ? 'Ready to explore' : '游戏已就绪';
+    } else if (loadState === 'failed') {
+      button.textContent = en ? 'Retry' : '重新加载';
+      note.textContent = failure === 'unsupported' ? (en ? 'Use a browser with WebGL 2 and WebAssembly.' : '请使用支持 WebGL 2 和 WebAssembly 的浏览器。')
+        : failure === 'engine' ? (en ? 'Game startup failed. Retry or try another browser.' : '游戏启动失败，可重试或更换浏览器。')
+        : (en ? 'Connection interrupted. Retry to resume.' : '连接中断，点击重试可继续下载。');
+    } else {
+      const mb = value => (value / 1048576).toFixed(1);
+      button.textContent = total && loaded === total ? (en ? 'Starting room…' : '正在启动房间…') : (en ? 'Loading…' : '正在加载…');
+      note.textContent = total ? (en ? 'Downloaded ' : '已下载 ') + mb(loaded) + ' / ' + mb(total) + ' MiB' : (en ? 'Connecting to game…' : '正在连接游戏…');
+    }
+  }
+  function failLoad(reason) {
+    clearTimeout(watchdog);
+    if (loadState !== 'loading') return;
+    loadState = 'failed';
+    failure = reason;
+    browserFrame?.remove();
+    browserFrame = null;
+    showLoadState();
+  }
+  function watchLoad(ms) {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => failLoad(total && loaded === total ? 'engine' : 'network'), ms);
+  }
   function send(type, extra={}) {
     if (window.ipc) { window.ipc.postMessage(JSON.stringify({type,lang,...extra})); return; }
     if(type==='game_rect' && browserFrame) {
@@ -13,15 +49,15 @@
     if(type==='play') {
       if(!browserFrame) {
         browserFrame=document.createElement('iframe');
-        browserFrame.title='ROOM 302 playable game';browserFrame.src='game/index.html';
+        browserFrame.title='ROOM 302 playable game';browserFrame.src='game/index.html?v=fast1';
         browserFrame.allow='autoplay; fullscreen';
-        Object.assign(browserFrame.style,{position:'fixed',border:'0',zIndex:'20',visibility:'hidden',background:'#211b26'});
+        Object.assign(browserFrame.style,{position:'fixed',border:'0',zIndex:'20',visibility:'visible',opacity:'0.01',pointerEvents:'none',background:'#211b26'});
         document.body.append(browserFrame);reportRect();
-        const button=document.getElementById('game-play');button.disabled=true;button.textContent=lang==='en'?'Loading game…':'游戏加载中…';
+        loadState='loading'; loaded=0; total=0; watchLoad(90000); showLoadState();
         return;
       }
       if(!browserReady)return;
-      browserFrame.style.visibility='visible';browserFrame.contentWindow.focus();
+      Object.assign(browserFrame.style,{visibility:'visible',opacity:'1',pointerEvents:'auto'});browserFrame.contentWindow.focus();
       browserFrame.contentWindow.room302Command('language',lang);
       browserFrame.contentWindow.room302Command('play');setPlaying(true);return;
     }
@@ -30,12 +66,20 @@
   }
   function pauseBrowser() {
     if(browserReady)browserFrame.contentWindow.room302Command('pause');
-    if(browserFrame)browserFrame.style.visibility='hidden';
+    if(browserFrame && browserReady)browserFrame.style.visibility='hidden';
     setPlaying(false);
+    if(!gameStarted) showLoadState();
   }
   window.addEventListener('message',event=>{
     if(!browserFrame || event.source!==browserFrame.contentWindow || event.origin!==location.origin)return;
+    if(event.data?.type==='room302-progress' && loadState==='loading') {
+      loaded=event.data.loaded; total=event.data.total;
+      watchLoad(loaded===total ? 120000 : 100000);
+      showLoadState();
+    }
+    if(event.data?.type==='room302-failed') failLoad(event.data.reason);
     if(event.data?.type==='room302-ready') {
+      clearTimeout(watchdog); loadState='ready';
       browserReady=true;
       const button=document.getElementById('game-play');if(button){button.disabled=false;button.textContent=lang==='en'?'Start exploring':'开始探索';}
       const note=document.querySelector('#game-start-cover p');if(note)note.textContent=lang==='en'?'Loaded · Click to enter the room':'加载完成 · 点击进入房间';
@@ -101,6 +145,7 @@
       document.getElementById('game-aperture').onclick=()=>send('play');
       document.getElementById('game-pause').onclick=()=>send('pause');
       setPlaying(false);
+      if (!playing && !gameStarted) showLoadState();
       requestAnimationFrame(reportRect);
     }
     if (scene === 'writer') {
