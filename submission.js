@@ -24,10 +24,10 @@
   payload.submissionCode=current.submissionId;sending=true;dialog.querySelectorAll('button').forEach(b=>b.disabled=true);status.textContent=text('正在寄出，请稍候…','Sending…');
   try{
    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(45000)});const result=await response.json();
-   if(!response.ok||!result.ok)throw Error(result.error||text('暂时无法提交，请稍后重试。','Submission failed. Please try again.'));
-   status.textContent=text('已收到你的投稿。原稿不会自动公开。\n请保存投稿编号，之后可用它向作者提出撤回：\n','Your submission has been received and will remain private.\nKeep this receipt if you want to ask the author to withdraw it:\n')+result.receipt;
+   if(!response.ok||!result.ok||result.receipt!==payload.submissionCode)throw Error(result.error||text('暂时无法提交，请稍后重试。','Submission failed. Please try again.'));
+   status.textContent=text('投稿成功，已经送达作者的私密收件箱。原稿不会自动公开。\n请保存投稿编号，之后可用它向作者提出撤回：\n','Your submission has been received and will remain private.\nKeep this receipt if you want to ask the author to withdraw it:\n')+result.receipt;
    dialog.querySelector('#send-story').hidden=true;dialog.querySelector('#cancel-submit').textContent=text('完成','Done');
-  }catch(error){status.textContent=text('未确认收到，请保留草稿。可重试，重复请求不会生成多份投稿。\n','Receipt not confirmed. Keep your draft and retry; repeated requests will not create duplicates.\n')+error.message;}
+  }catch(error){status.textContent=text('未收到服务器回执，投递结果未知。请勿刷新或关闭页面，先复制正文，再点击「确认投稿」重试。\n','No receipt yet. Keep this tab open, copy your story, then retry.\n')+error.message;}
   finally{sending=false;dialog.querySelectorAll('button').forEach(b=>b.disabled=false);}
  }
 })();
