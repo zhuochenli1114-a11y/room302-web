@@ -125,7 +125,7 @@
   }
   function setPlaying(value) {
     playing = !!value;
-    if (playing) gameStarted = true;
+    if (playing) { gameStarted = true; window.dispatchEvent(new Event('room302-exploring')); }
     const cover = document.getElementById('game-start-cover');
     if (cover) cover.hidden = playing;
     const play = document.getElementById('game-play');
