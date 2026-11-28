@@ -26,6 +26,11 @@
    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(45000)});const result=await response.json();
    if(!response.ok||!result.ok||result.receipt!==payload.submissionCode)throw Error(result.error||text('暂时无法提交，请稍后重试。','Submission failed. Please try again.'));
    status.textContent=text('投稿成功，已经送达作者的私密收件箱。原稿不会自动公开。\n请保存投稿编号，之后可用它向作者提出撤回：\n','Your submission has been received and will remain private.\nKeep this receipt if you want to ask the author to withdraw it:\n')+result.receipt;
+   if(document.documentElement.classList.contains('phone')) {
+     const copy = document.createElement('button'); copy.type='button'; copy.textContent=text('复制投稿编号','Copy receipt');
+     copy.onclick=async()=>{try{await navigator.clipboard.writeText(result.receipt);copy.textContent=text('编号已复制','Receipt copied');}catch{copy.textContent=text('请长按上方编号复制','Press and hold the receipt above to copy');}};
+     dialog.querySelector('#cancel-submit').before(copy); status.scrollIntoView({block:'center'});
+   }
    dialog.querySelector('#send-story').hidden=true;dialog.querySelector('#cancel-submit').textContent=text('完成','Done');
   }catch(error){status.textContent=text('未收到服务器回执，投递结果未知。请勿刷新或关闭页面，先复制正文，再点击「确认投稿」重试。\n','No receipt yet. Keep this tab open, copy your story, then retry.\n')+error.message;}
   finally{sending=false;dialog.querySelectorAll('button').forEach(b=>b.disabled=false);}

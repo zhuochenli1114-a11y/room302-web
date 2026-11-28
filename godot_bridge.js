@@ -1,5 +1,6 @@
 /* Only navigation, explicit clipboard actions and the game rectangle cross the local bridge. */
 (() => {
+  const usePhone = () => typeof phoneLayout !== 'undefined' && phoneLayout.matches;
   let browserFrame = null;
   let browserReady = false;
   let loadState = 'idle';
@@ -47,6 +48,7 @@
     if(type==='page') { pauseBrowser(); return; }
     if(type==='pause') { pauseBrowser(); return; }
     if(type==='play') {
+      if(usePhone()) { change('cinema'); return; }
       if(!browserFrame) {
         browserFrame=document.createElement('iframe');
         browserFrame.title='ROOM 302 playable game';browserFrame.src='game/index.html?v=fast1';
@@ -134,6 +136,7 @@
     if (status) status.textContent = lang==='en' ? (playing?'Exploring · Esc releases the cursor':'Paused · your place is kept') : (playing?'探索中 · Esc 释放鼠标':'已暂停 · 保留当前位置');
   }
   render = function() {
+    if(usePhone() && scene==='demo') scene='cinema';
     document.body.classList.toggle('showing-game',scene==='demo');
     document.documentElement.classList.toggle('showing-game',scene==='demo');
     originalRender();
@@ -148,7 +151,7 @@
       if (!playing && !gameStarted) showLoadState();
       requestAnimationFrame(reportRect);
     }
-    if (scene === 'writer') {
+    if (scene === 'writer' && !usePhone()) {
       const paste = document.createElement('button');
       paste.type='button'; paste.className='tool';
       paste.innerHTML='<span class="sprite sprite-folder" aria-hidden="true"></span><span>'+(lang==='en'?'Paste':'粘贴')+'</span>';
@@ -188,7 +191,7 @@
   };
   new ResizeObserver(reportRect).observe(stage);
   window.addEventListener('resize',reportRect);
-  if (location.hash === '#game') scene = 'demo';
+  if (location.hash === '#game') scene = usePhone() ? 'cinema' : 'demo';
   if (location.hash === '#animation') scene = 'cinema';
   render();
 })();
