@@ -5,20 +5,25 @@ document.documentElement.classList.toggle('phone', phoneLayout.matches);
   const en = (zh, english) => lang === 'en' ? english : zh;
   const mobileTemplate = (original, small) => () => phoneLayout.matches ? small() : original();
   const link = (zh, english, action, color) => btn(en(zh, english), action, color);
-  const write = () => link('写一封记忆来信','Write a memory','enter:writer','pink');
-  const film = () => link('观看动画','Watch the animation','go:cinema','white');
-  bootHTML = mobileTemplate(bootHTML, () => `<section class="scene phone-home">
-    <div class="phone-computer"><img src="assets/MAHbXHvJMhk.png" alt="${en('手绘复古电脑','Hand-drawn vintage computer')}"></div>
-    <h1>${en('记忆来信','Memory Letters')} <small>ROOM 302</small></h1>
-    <p>${en('让一件旧物，打开一段记忆。','Let an old object open a memory.')}</p>
-    <div class="phone-actions">${write()}${film()}${link('进入记忆房间','Enter the memory room','go:desktop','yellow')}</div></section>`);
-  const menu = (isLobby) => `<section class="scene phone-menu"><div class="topline">${back(isLobby?'desktop':'boot')}<h1 class="scene-title">${isLobby?en('记忆客厅','Memory room'):en('电脑桌面','Desktop')}</h1></div>
-    <img class="phone-room-art" src="${A.hall}" alt="${en('贝利维的旅馆客厅','Bellevue’s hotel living room')}"><div class="phone-actions">
-    ${write()}${film()}${isLobby?link('玩具收藏室','Toy collection','enter:toy','yellow'):link('进入旅馆','Enter the hotel','go:lobby','yellow')}
-    ${link('项目故事图文册','Project storybook','go:story','white')}${link('我的草稿','My drafts','drafts','white')}${link('了解与学习','Learn more','go:learn','white')}
-    ${isLobby?link('阅读角','Reading corner','reading','white'):''}</div></section>`;
-  desktopHTML = mobileTemplate(desktopHTML, () => menu(false));
-  lobbyHTML = mobileTemplate(lobbyHTML, () => menu(true));
+  const key = (kind, action, zh, english) =>
+    `<button type="button" class="art-key ${kind}" data-act="${action}"><span>${en(zh,english)}</span></button>`;
+  const home = () => `<section class="scene phone-cover">
+    <div class="art-board flip-board">
+      <img src="assets/mobile-flip.webp" width="941" height="1671" alt="${en('彩色像素翻盖手机','Colourful pixel-art flip phone')}">
+      <div class="flip-screen"><h1>${en('记忆来信','Memory Letters')}</h1><strong>ROOM 302</strong><p>${en('让一件旧物，打开一段记忆。','Let an old object open a memory.')}</p></div>
+      ${key('key-a','go:lobby','进入旅馆','Enter hotel')}${key('key-b','enter:writer','写一封来信','Write a letter')}
+      ${key('key-c','go:cinema','观看动画','Watch film')}${key('key-d','drafts','我的草稿','My drafts')}
+    </div></section>`;
+  bootHTML = mobileTemplate(bootHTML, home);
+  desktopHTML = mobileTemplate(desktopHTML, home);
+  lobbyHTML = mobileTemplate(lobbyHTML, () => `<section class="scene phone-hotel">
+    <div class="hotel-nav">${back('boot')}<h1>${en('记忆客厅','Memory room')}</h1></div>
+    <div class="art-board hotel-board">
+      <img src="assets/mobile-hotel.webp" width="941" height="1672" alt="${en('贝利维坐在旅馆沙发上，两扇门之间有一台电视','Bellevue on the hotel sofa, with a television between two doors')}">
+      ${key('room-toys','enter:toy','玩具收藏室','Toy room')}${key('room-film','go:cinema','观看动画','Watch film')}${key('room-write','enter:writer','写一封来信','Write a letter')}
+      ${key('key-a','go:story','项目故事图文册','Storybook')}${key('key-b','drafts','我的草稿','My drafts')}
+      ${key('key-c','go:learn','了解与学习','Learn more')}${key('key-d','reading','阅读角','Reading corner')}
+    </div></section>`);
   writerHTML = mobileTemplate(writerHTML, () => `<section id="writer" class="scene phone-writer">
     <div class="topline">${back()}<h1 class="scene-title">${en('写一封来信','Write a memory')}</h1></div>
     <div class="phone-paper" id="writer-paper"><label for="writer-title">${en('标题（选填）','Title (optional)')}</label>
